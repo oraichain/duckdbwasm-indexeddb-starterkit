@@ -13,6 +13,7 @@
     "react-dom": "^18.2.0",
     "react-icons": "^4.8.0",
     "@duckdb/duckdb-wasm": "^1.27.1-dev125.0",
+    "@duckdb/duckdb-wasm-shell": "^1.27.1-dev125.0",
     "idb-keyval": "^6.2.1"
   },
   "devDependencies": {
