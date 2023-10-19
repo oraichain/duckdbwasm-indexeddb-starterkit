@@ -10,6 +10,22 @@ import shellModule from '@duckdb/duckdb-wasm-shell/dist/shell_bg.wasm?url';
 import './index.css';
 import 'xterm/css/xterm.css';
 
+const compress = async (buf) => {
+  try {
+    return new Uint8Array(await new Response(new Blob([buf]).stream().pipeThrough(new CompressionStream('deflate-raw'))).arrayBuffer());
+  } catch {
+    return buf;
+  }
+};
+
+const decompress = async (buf) => {
+  try {
+    return new Uint8Array(await new Response(new Blob([buf]).stream().pipeThrough(new DecompressionStream('deflate-raw'))).arrayBuffer());
+  } catch {
+    return buf;
+  }
+};
+
 /**
  *  @type {duckdb.AsyncDuckDBConnection} conn
  * */
@@ -38,9 +54,13 @@ const shellEl = document.querySelector('#shell');
   conn = await db.connect(); // Connect to db
 
   // Import Parquet
+  /**
+   * @type {Uint8Array} buf
+   */
   const buf = await get('todos');
   if (buf) {
-    await db.registerFileBuffer('todos.parquet', buf);
+    console.log('parquet', buf);
+    await db.registerFileBuffer('todos.parquet', await decompress(buf));
     conn.send(`create table todos as select * from 'todos.parquet'`);
   } else {
     conn.send(`create table todos(id bigint primary key, title varchar, completed bool)`);
@@ -53,7 +73,9 @@ const shellEl = document.querySelector('#shell');
 const saveDuckdb = async () => {
   // Export Parquet
   await conn.send(`copy (select * from todos) to 'todos.parquet'`);
-  await set('todos', await conn.bindings.copyFileToBuffer('todos.parquet'));
+  const buf = await compress(await conn.bindings.copyFileToBuffer('todos.parquet'));
+  console.log('parquet', buf);
+  await set('todos', buf);
 };
 
 const App = () => {
