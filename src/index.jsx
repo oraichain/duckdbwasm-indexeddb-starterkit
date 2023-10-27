@@ -6,7 +6,12 @@ import { MdDarkMode, MdSunny } from 'react-icons/md';
 import { get, set } from 'idb-keyval';
 import * as duckdb from '@duckdb/duckdb-wasm';
 import * as shell from '@duckdb/duckdb-wasm-shell';
+
+// wasm files
+import duckdb_wasm_eh from '@duckdb/duckdb-wasm/dist/duckdb-eh.wasm?url';
+import eh_worker from '@duckdb/duckdb-wasm/dist/duckdb-browser-eh.worker.js?url';
 import shellModule from '@duckdb/duckdb-wasm-shell/dist/shell_bg.wasm?url';
+
 import './index.css';
 import 'xterm/css/xterm.css';
 
@@ -32,16 +37,9 @@ const decompress = async (buf) => {
 let conn;
 const shellEl = document.querySelector('#shell');
 (async () => {
-  // Select a bundle based on browser checks
-  const bundle = await duckdb.selectBundle(duckdb.getJsDelivrBundles());
-  const worker_url = URL.createObjectURL(new Blob([`importScripts("${bundle.mainWorker}");`], { type: 'text/javascript' }));
-
-  // Instantiate the asynchronus version of DuckDB-Wasm
-  const worker = new Worker(worker_url);
-  const logger = new duckdb.VoidLogger();
-  const db = new duckdb.AsyncDuckDB(logger, worker);
-  await db.instantiate(bundle.mainModule, bundle.pthreadWorker);
-  URL.revokeObjectURL(worker_url);
+  const worker = new Worker(eh_worker);
+  const db = new duckdb.AsyncDuckDB(new duckdb.VoidLogger(), worker);
+  await db.instantiate(duckdb_wasm_eh);
 
   shell.embed({
     shellModule,
